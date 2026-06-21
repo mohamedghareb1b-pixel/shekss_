@@ -89,11 +89,11 @@ function dealCard(d, mode, isExpired = false) {
     : `<button class="btn-deal" onclick="openDealPage('${d.id}')">الحق الفرصة 🔥</button>`;
 
   return `<div class="deal-card" data-cat="${d.category || ''}" style="${cardStyle}">
-    <div class="dimg" style="position:relative;">${imgHtml}<span class="badge-disc">${d.discount}%</span>${hot}${offline}${expiredOverlay}</div>
+    <div class="dimg" style="position:relative;cursor:pointer;" onclick="openDealPage('${d.id}')">${imgHtml}<span class="badge-disc">${d.discount}%</span>${hot}${offline}${expiredOverlay}</div>
     <div class="dbody">
       <div class="dcat">${catLabel}${subcatLabel}</div>
       ${storeName}
-      <div class="dname">${d.name}</div>
+      <div class="dname" style="cursor:pointer;" onclick="openDealPage('${d.id}')">${d.name}</div>
       <div class="ddesc">${d.description || ''}</div>
       ${priceHtml}${dist}${timerHtml}${coupon}
       <div class="card-footer">${btnHtml}</div>
