@@ -69,6 +69,7 @@ function _renderDealPage(wrap, d, merchant) {
   const details   = d.details || '';
   const img       = d.main_image || d.image || null;
   const img2      = d.second_image || null;
+  const hasImg2   = !!img2;
   const company   = d.company_name || merchant?.business_name || merchant?.company_name || '';
   const coupon    = d.coupon_code || '';
   const link      = d.link || d.location_link || '';
@@ -95,15 +96,22 @@ function _renderDealPage(wrap, d, merchant) {
     }
   }
 
+  // Discount badge — supports fixed % or range (from-to)
+  let discountBadge = '';
+  if (d.discount_from && d.discount_to) {
+    discountBadge = `<span class="dp-discount-badge">خصم ${d.discount_from}%-${d.discount_to}%</span>`;
+  } else if (d.discount_percent || d.discount) {
+    discountBadge = `<span class="dp-discount-badge">-${d.discount_percent || d.discount}%</span>`;
+  }
+
   // Price section
   let priceHtml = '';
-  if (d.new_price || d.old_price) {
+  if (d.new_price || d.old_price || discountBadge) {
     priceHtml = `
       <div class="dp-price-row">
         ${d.new_price ? `<span class="dp-new-price">${Number(d.new_price).toLocaleString('ar-EG')} جنيه</span>` : ''}
         ${d.old_price ? `<span class="dp-old-price">${Number(d.old_price).toLocaleString('ar-EG')} جنيه</span>` : ''}
-        ${d.discount_percent || d.discount
-          ? `<span class="dp-discount-badge">-${d.discount_percent || d.discount}%</span>` : ''}
+        ${discountBadge}
       </div>`;
   }
 
@@ -135,6 +143,11 @@ function _renderDealPage(wrap, d, merchant) {
       <div class="dp-merchant-name">${_dpEsc(company)}</div>
     </div>` : '');
 
+  // Description — truncated with "show more" if longer than ~120 chars
+  const DESC_LIMIT = 120;
+  const descTruncated = desc.length > DESC_LIMIT;
+  const descShort = descTruncated ? desc.substring(0, DESC_LIMIT).trim() + '…' : desc;
+
   wrap.innerHTML = `
 
     <!-- Back button -->
@@ -149,28 +162,40 @@ function _renderDealPage(wrap, d, merchant) {
 
     <div class="dp-wrap">
 
-      <!-- ── LEFT: Images ── -->
+      <!-- ── IMAGES: carousel if 2 images, single otherwise ── -->
       <div class="dp-images">
-        <div class="dp-main-img">
-          ${img
-            ? `<img src="${_dpEsc(img)}" alt="${_dpEsc(name)}"
-                    style="width:100%;height:100%;object-fit:cover;">`
-            : `<div style="width:100%;height:100%;display:flex;align-items:center;
-                           justify-content:center;font-size:64px;background:var(--gray-50);">
-                 🏷️
-               </div>`}
+        <div class="dp-carousel" id="dp-carousel">
+          <div class="dp-carousel-track" id="dp-carousel-track">
+            <div class="dp-slide">
+              ${img
+                ? `<img src="${_dpEsc(img)}" alt="${_dpEsc(name)}" loading="eager">`
+                : `<div class="dp-img-placeholder">🏷️</div>`}
+            </div>
+            ${hasImg2 ? `
+            <div class="dp-slide">
+              <img src="${_dpEsc(img2)}" alt="${_dpEsc(name)}" loading="lazy">
+            </div>` : ''}
+          </div>
+
           ${isExpired ? '<div class="dp-expired-overlay">انتهى العرض</div>' : ''}
           ${(d.status === 'hot') ? '<div class="dp-hot-badge">🔥 هوت ديل</div>' : ''}
           ${isOffline ? '<div class="dp-offline-badge">📍 عروض المنطقة</div>' : ''}
+
+          ${hasImg2 ? `
+          <button class="dp-carousel-arrow dp-arrow-prev" onclick="dpCarouselGo(-1)" aria-label="الصورة السابقة">
+            ‹
+          </button>
+          <button class="dp-carousel-arrow dp-arrow-next" onclick="dpCarouselGo(1)" aria-label="الصورة التالية">
+            ›
+          </button>
+          <div class="dp-carousel-dots">
+            <span class="dp-dot active" data-i="0"></span>
+            <span class="dp-dot" data-i="1"></span>
+          </div>` : ''}
         </div>
-        ${img2 ? `
-        <div class="dp-second-img">
-          <img src="${_dpEsc(img2)}" alt="${_dpEsc(name)}"
-               style="width:100%;height:100%;object-fit:cover;border-radius:12px;">
-        </div>` : ''}
       </div>
 
-      <!-- ── RIGHT: Info ── -->
+      <!-- ── INFO ── -->
       <div class="dp-info">
 
         <!-- Category breadcrumb -->
@@ -191,6 +216,17 @@ function _renderDealPage(wrap, d, merchant) {
 
         <!-- Expiry -->
         ${expiryHtml}
+
+        <!-- Short description right under title (always visible, brief) -->
+        ${desc ? `
+        <div class="dp-desc-block">
+          <p class="dp-section-body" id="dp-desc-text">${_dpEsc(descTruncated ? descShort : desc)}</p>
+          ${descTruncated ? `
+          <button class="dp-show-more-btn" id="dp-show-more-btn"
+                  onclick="dpToggleDescription('${_dpEsc(desc).replace(/'/g, "\\'")}')">
+            اظهر المزيد ▾
+          </button>` : ''}
+        </div>` : ''}
 
         <!-- Coupon code -->
         ${coupon ? `
@@ -218,16 +254,10 @@ function _renderDealPage(wrap, d, merchant) {
             : `<button class="dp-btn-disabled" disabled>لا يوجد رابط</button>`}
         </div>
 
-        <!-- Description -->
-        ${desc ? `
-        <div class="dp-section">
-          <div class="dp-section-title">📋 تفاصيل العرض</div>
-          <p class="dp-section-body">${_dpEsc(desc)}</p>
-        </div>` : ''}
-
+        <!-- Additional details — always BELOW the CTA button -->
         ${details ? `
         <div class="dp-section">
-          <div class="dp-section-title">ℹ️ معلومات إضافية</div>
+          <div class="dp-section-title">ℹ️ تفاصيل العرض</div>
           <p class="dp-section-body">${_dpEsc(details)}</p>
         </div>` : ''}
 
@@ -258,6 +288,39 @@ function _renderDealPage(wrap, d, merchant) {
 
   // Full SEO update — title, meta, canonical, OG, Product schema
   updateDealSEO(d, merchant);
+}
+
+// ===== CAROUSEL =====
+let _dpCarouselIndex = 0;
+
+function dpCarouselGo(direction) {
+  const track = document.getElementById('dp-carousel-track');
+  if (!track) return;
+  const slides = track.children.length;
+  _dpCarouselIndex = (_dpCarouselIndex + direction + slides) % slides;
+  track.style.transform = `translateX(${_dpCarouselIndex * 100}%)`;
+
+  document.querySelectorAll('.dp-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === _dpCarouselIndex);
+  });
+}
+
+// ===== DESCRIPTION SHOW MORE =====
+function dpToggleDescription(fullText) {
+  const textEl = document.getElementById('dp-desc-text');
+  const btnEl  = document.getElementById('dp-show-more-btn');
+  if (!textEl || !btnEl) return;
+
+  const expanded = btnEl.dataset.expanded === 'true';
+  if (expanded) {
+    textEl.textContent = fullText.length > 120 ? fullText.substring(0, 120).trim() + '…' : fullText;
+    btnEl.textContent = 'اظهر المزيد ▾';
+    btnEl.dataset.expanded = 'false';
+  } else {
+    textEl.textContent = fullText;
+    btnEl.textContent = 'اظهر أقل ▴';
+    btnEl.dataset.expanded = 'true';
+  }
 }
 
 // ===== COPY COUPON CODE =====
