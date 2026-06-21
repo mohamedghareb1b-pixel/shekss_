@@ -58,6 +58,7 @@ function _renderAdminShell() {
 
           <span class="dash-nav-section-label">الإدارة</span>
           ${_adminNavItem('admin-coupons',    '🎟️', 'كوبونات تخصصية')}
+          ${_adminNavItem('admin-blog',       '📝', 'المدونة')}
           ${_adminNavItem('merchant-requests','🆕', 'طلبات التجار',    'adm-badge-merch-req')}
           ${_adminNavItem('merchants',        '🏪', 'إدارة التجار')}
           ${_adminNavItem('messages',         '💬', 'الرسائل',         'adm-badge-msgs')}
@@ -115,6 +116,7 @@ function switchAdminSection(section) {
     'delete-requests':   { title: 'طلبات الحذف',       sub: 'طلبات الحذف المعلقة' },
     'admin-add-deal':    { title: 'إضافة عرض',         sub: 'إضافة عرض مباشر من الأدمن' },
     'admin-coupons':     { title: 'كوبونات تخصصية',    sub: 'كوبونات منصة شيكس' },
+    'admin-blog':        { title: 'المدونة',           sub: 'إضافة وإدارة مقالات شيكس' },
     'merchant-requests': { title: 'طلبات التجار',      sub: 'تجار جدد ينتظرون الموافقة' },
     'merchants':         { title: 'إدارة التجار',      sub: 'كل التجار المسجلين' },
     'messages':          { title: 'الرسائل',           sub: 'رسائل العملاء والتجار' },
@@ -136,6 +138,7 @@ function switchAdminSection(section) {
   if (section === 'delete-requests')   renderAdminDeleteRequests();
   if (section === 'admin-add-deal')    renderAdminAddDeal();
   if (section === 'admin-coupons')     renderAdminCoupons();
+  if (section === 'admin-blog')        renderAdminBlog();
   if (section === 'merchant-requests') renderMerchantRequests();
   if (section === 'merchants')         renderAdminMerchants();
   if (section === 'messages')          renderAdminMessages();
