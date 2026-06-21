@@ -225,6 +225,28 @@ function renderAddDealForm() {
             <span class="discount-badge-large" id="discount-value">0%</span>
             <span class="discount-label">نسبة الخصم — محسوبة تلقائياً</span>
           </div>
+
+          <!-- Discount Range — alternative to fixed price discount -->
+          <div class="form-group" style="margin-top:14px;border-top:1px solid var(--gray-100);padding-top:14px;">
+            <label class="form-label">
+              <input type="checkbox" id="deal-use-range" onchange="toggleDiscountRange()"
+                     style="width:auto;margin-left:6px;vertical-align:middle;">
+              استخدم نطاق خصم بدل نسبة ثابتة (مثال: خصم من 10% إلى 25%)
+            </label>
+            <div id="discount-range-row" class="price-row" style="display:none;margin-top:8px;">
+              <div class="form-group">
+                <label class="form-label">من %</label>
+                <input class="form-input" type="number" id="deal-discount-from"
+                       placeholder="10" min="0" max="100">
+              </div>
+              <div class="form-group">
+                <label class="form-label">إلى %</label>
+                <input class="form-input" type="number" id="deal-discount-to"
+                       placeholder="25" min="0" max="100">
+              </div>
+            </div>
+            <span class="form-hint">عند التفعيل، سيظهر العرض كـ "خصم من X% إلى Y%" بدل نسبة ثابتة</span>
+          </div>
         </div>
 
         <!-- Deal Settings -->
@@ -339,6 +361,13 @@ function calcDiscount() {
   } else {
     if (disp) disp.style.display = 'none';
   }
+}
+
+// ===== DISCOUNT RANGE TOGGLE =====
+function toggleDiscountRange() {
+  const useRange = document.getElementById('deal-use-range')?.checked;
+  const rangeRow = document.getElementById('discount-range-row');
+  if (rangeRow) rangeRow.style.display = useRange ? 'flex' : 'none';
 }
 
 // ===== DURATION SELECTOR =====
@@ -540,6 +569,11 @@ async function submitDeal() {
     const discPct  = oldP > 0 ? Math.round((1 - newP / oldP) * 100) : null;
     const expiresAt = new Date(Date.now() + _selectedDuration * 86400000).toISOString();
 
+    // 2b. Discount range (optional — overrides single discount display on deal page)
+    const useRange   = document.getElementById('deal-use-range')?.checked;
+    const discFrom   = useRange ? parseFloat(document.getElementById('deal-discount-from')?.value) || null : null;
+    const discTo     = useRange ? parseFloat(document.getElementById('deal-discount-to')?.value)   || null : null;
+
     // 3. Build deal record
     const deal = {
       merchant_id:      AuthState.user.id,
@@ -561,6 +595,8 @@ async function submitDeal() {
       new_price:        newP,
       discount:         discPct,
       discount_percent: discPct,
+      discount_from:    discFrom,
+      discount_to:      discTo,
       status:           _selectedDealStatus,
       is_offline:       _dealType === 'offline',
       expires_at:       expiresAt,
