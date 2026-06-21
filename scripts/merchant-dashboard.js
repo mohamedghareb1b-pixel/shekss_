@@ -136,7 +136,7 @@ function switchDashSection(section) {
   const name = AuthState.profile?.full_name
     || AuthState.user?.email?.split('@')[0] || 'التاجر';
 
-  if (section === 'overview')         content.innerHTML = _renderOverview(name);
+  if (section === 'overview')         { content.innerHTML = _renderOverview(name); _loadDashCounts(); }
   if (section === 'deals')            { content.innerHTML = _renderDeals(); _loadMerchantDeals(); }
   if (section === 'add-deal')         { content.innerHTML = renderAddDealForm(); _initAddDealDefaults(); }
   if (section === 'business-profile') {
@@ -193,10 +193,10 @@ function _renderOverview(name) {
     </div>
 
     <div class="dash-stats">
-      ${_statCard('🏷️', 'عروض نشطة',  '0', '#eff6ff')}
-      ${_statCard('👁️', 'مشاهدات',     '0', '#f5f3ff')}
-      ${_statCard('💬', 'رسائل',        '0', '#fff7ed')}
-      ${_statCard('⭐', 'التقييم',       '—', '#f0fdf4')}
+      ${_statCard('🏷️', 'عروض نشطة',  '—', '#eff6ff', 'stat-active-deals')}
+      ${_statCard('👁️', 'مشاهدات',     '—', '#f5f3ff', 'stat-views')}
+      ${_statCard('💬', 'رسائل',        '0', '#fff7ed', 'stat-messages')}
+      ${_statCard('⭐', 'التقييم',       '—', '#f0fdf4', 'stat-rating')}
     </div>
 
     <div class="dash-sections">
@@ -303,15 +303,35 @@ function _renderMessages() {
 // ===== LOAD COUNTS =====
 async function _loadDashCounts() {
   try {
-    const { count } = await sb.from('deals')
+    // Active (approved, non-expired) deals — used for both sidebar badge and overview stat
+    const { data: activeDeals, count } = await sb.from('deals')
+      .select('views', { count: 'exact' })
+      .eq('merchant_id', AuthState.user?.id)
+      .eq('approval_status', 'approved')
+      .neq('status', 'expired');
+
+    const activeCount = count || 0;
+    const totalViews  = (activeDeals || []).reduce((sum, d) => sum + (d.views || 0), 0);
+
+    // Sidebar badge — counts ALL non-expired deals (including pending review)
+    const { count: allCount } = await sb.from('deals')
       .select('*', { count: 'exact', head: true })
       .eq('merchant_id', AuthState.user?.id)
       .neq('status', 'expired');
-    const el = document.getElementById('dash-deals-count');
-    if (el && count !== null) {
-      el.textContent   = count;
-      el.style.display = count > 0 ? '' : 'none';
+
+    const badgeEl = document.getElementById('dash-deals-count');
+    if (badgeEl && allCount !== null) {
+      badgeEl.textContent   = allCount;
+      badgeEl.style.display = allCount > 0 ? '' : 'none';
     }
+
+    // Overview stat cards — partial update, no full re-render
+    const activeEl = document.getElementById('stat-active-deals');
+    if (activeEl) activeEl.textContent = activeCount;
+
+    const viewsEl = document.getElementById('stat-views');
+    if (viewsEl) viewsEl.textContent = totalViews;
+
   } catch (_) {}
 }
 
@@ -321,12 +341,12 @@ function _initAddDealDefaults() {
   if (typeof initAddDealPrefill    === 'function') initAddDealPrefill();
 }
 
-function _statCard(ico, label, value, bg) {
+function _statCard(ico, label, value, bg, id) {
   return `
     <div class="dash-stat-card">
       <div class="dash-stat-icon" style="background:${bg};">${ico}</div>
       <div class="dash-stat-label">${label}</div>
-      <div class="dash-stat-value">${value}</div>
+      <div class="dash-stat-value"${id ? ` id="${id}"` : ''}>${value}</div>
       <div class="dash-stat-delta flat">— لا توجد بيانات بعد</div>
     </div>`;
 }
