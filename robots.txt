@@ -1,0 +1,30 @@
+User-agent: *
+Allow: /
+Disallow: /?p=merchant-dashboard
+Disallow: /?p=admin-dashboard
+Disallow: /?p=profile
+Disallow: /?p=login
+
+# AI / Generative Engine Crawlers — explicitly allowed for GEO
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://www.shekss.com/sitemap.xml
